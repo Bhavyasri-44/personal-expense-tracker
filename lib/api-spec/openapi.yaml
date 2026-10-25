@@ -1,0 +1,172 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: transactions
+    description: Personal income and expense transactions
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /transactions:
+    get:
+      operationId: listTransactions
+      tags: [transactions]
+      summary: List transactions
+      responses:
+        "200":
+          description: Transactions ordered by date, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+        "401":
+          description: Sign-in required
+    post:
+      operationId: createTransaction
+      tags: [transactions]
+      summary: Record an income or expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid transaction
+        "401":
+          description: Sign-in required
+  /transactions/{id}:
+    delete:
+      operationId: deleteTransaction
+      tags: [transactions]
+      summary: Delete a transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "204":
+          description: Transaction deleted
+        "404":
+          description: Transaction not found
+        "401":
+          description: Sign-in required
+  /transactions/summary:
+    get:
+      operationId: getTransactionSummary
+      tags: [transactions]
+      summary: Get dashboard totals and expense breakdown
+      responses:
+        "200":
+          description: Totals and category breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionSummary"
+        "401":
+          description: Sign-in required
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [income, expense]
+        description:
+          type: string
+        amount:
+          type: number
+        category:
+          type: string
+          enum: [Food, Travel, Shopping, Education, Bills, Salary, Allowance, Other]
+        date:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, type, description, amount, category, date, createdAt]
+    TransactionInput:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [income, expense]
+        description:
+          type: string
+          minLength: 1
+          maxLength: 120
+        amount:
+          type: number
+          exclusiveMinimum: 0
+        category:
+          type: string
+          enum: [Food, Travel, Shopping, Education, Bills, Salary, Allowance, Other]
+        date:
+          type: string
+          format: date
+      required: [type, description, amount, category, date]
+    CategoryTotal:
+      type: object
+      properties:
+        category:
+          type: string
+        total:
+          type: number
+      required: [category, total]
+    TransactionSummary:
+      type: object
+      properties:
+        totalIncome:
+          type: number
+        totalExpenses:
+          type: number
+        balance:
+          type: number
+        expenseByCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryTotal"
+      required: [totalIncome, totalExpenses, balance, expenseByCategory]
+
